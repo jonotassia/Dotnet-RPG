@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Identity.Web;
+global using Dotnet_RPG.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 

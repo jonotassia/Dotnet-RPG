@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Dotnet_RPG.Dtos.Character;
+using Dotnet_RPG.Services.CharacterService;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Dotnet_RPG.Controllers
 {
@@ -6,16 +8,29 @@ namespace Dotnet_RPG.Controllers
     [Route("api/[controller]")]
     public class CharacterController : ControllerBase
     {
-        private static Character knight = new Character();
+        private readonly ICharacterService _characterService;
 
-        [HttpGet]
-        public ActionResult<Character> Get()
+        public CharacterController(ICharacterService characterService)
         {
-            if (knight == null)
-            {
-                return NotFound();
-            }
-            return Ok(knight);
+            this._characterService = characterService;
+        }
+
+        [HttpGet("GetAll")]
+        public async Task<ActionResult<ServiceResponse<List<GetCharacterDto>>>> Get()
+        {
+            return Ok(await this._characterService.GetAllCharacters());
+        }
+
+        [HttpGet("{id}")]
+        public async Task<ActionResult<ServiceResponse<GetCharacterDto>>> GetCharacter(int id) 
+        { 
+            return Ok(await this._characterService.GetChracterById(id));
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<ServiceResponse<List<AddCharacterDto>>>> PostCharacter(AddCharacterDto newCharacter)
+        {
+            return Ok(await this._characterService.AddCharacter(newCharacter));
         }
     }
 }

@@ -1,8 +1,8 @@
-﻿namespace Dotnet_RPG.Models
+﻿namespace Dotnet_RPG.Dtos.Character
 {
-    public class Character
-    {        
-        // Declare properties
+    public class GetCharacterDto
+    {
+        // Properties
         public int Id { get; set; }
         public string Name { get; set; } = "Character";
         public int HitPoints { get; set; } = 100;

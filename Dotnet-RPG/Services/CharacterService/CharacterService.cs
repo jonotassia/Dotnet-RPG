@@ -43,5 +43,55 @@ namespace Dotnet_RPG.Services.CharacterService
             serviceResponse.Data = _mapper.Map<GetCharacterDto>(character);
             return serviceResponse;
         }
+
+        public async Task<ServiceResponse<GetCharacterDto>> UpdateCharacter(UpdateCharacterDto updateCharacter)
+        {
+            var serviceResponse = new ServiceResponse<GetCharacterDto>();
+
+            try
+            {
+                var character = characters.FirstOrDefault(c => c.Id == updateCharacter.Id);
+
+                if (character == null)
+                {
+                    throw new NullReferenceException($"Character with Id '{updateCharacter.Id}' not found.");
+                }
+
+                _mapper.Map<Character>(updateCharacter);
+                serviceResponse.Data = _mapper.Map<GetCharacterDto>(character);
+            }
+            catch (NullReferenceException ex)
+            {
+                serviceResponse.Message = ex.Message;
+                serviceResponse.Success = false;
+            }
+
+            return serviceResponse;
+        }
+
+        public async Task<ServiceResponse<List<GetCharacterDto>>> DeleteCharacter(int id)
+        {
+            var serviceResponse = new ServiceResponse<List<GetCharacterDto>>();
+            
+            try
+            {
+                var character = characters.FirstOrDefault(c => c.Id == id);
+                characters.Remove(character);
+
+                if (character is null)
+                {
+                    throw new NullReferenceException($"Character with Id '{id}' not found.");
+                }
+
+                serviceResponse.Data = characters.Select(c => _mapper.Map<GetCharacterDto>(c)).ToList();
+            }
+            catch(NullReferenceException ex)
+            {
+                serviceResponse.Message = ex.Message;
+                serviceResponse.Success = false;
+            }
+            
+            return serviceResponse;
+        }
     }
 }

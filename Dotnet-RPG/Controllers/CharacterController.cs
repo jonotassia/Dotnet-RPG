@@ -1,4 +1,5 @@
-﻿using Dotnet_RPG.Dtos.Character;
+﻿using Azure;
+using Dotnet_RPG.Dtos.Character;
 using Dotnet_RPG.Services.CharacterService;
 using Microsoft.AspNetCore.Mvc;
 
@@ -31,6 +32,30 @@ namespace Dotnet_RPG.Controllers
         public async Task<ActionResult<ServiceResponse<List<AddCharacterDto>>>> PostCharacter(AddCharacterDto newCharacter)
         {
             return Ok(await this._characterService.AddCharacter(newCharacter));
+        }
+
+        [HttpPut]
+        public async Task<ActionResult<ServiceResponse<List<GetCharacterDto>>>> PutCharacter(UpdateCharacterDto updateCharacter)
+        {
+            var response = await this._characterService.UpdateCharacter(updateCharacter);
+
+            if (!response.Success)
+            {
+                return NotFound(response);
+            }
+            return Ok(response);
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult<ServiceResponse<List<GetCharacterDto>>>> DeleteCharacter(int id)
+        {
+            var response = await this._characterService.DeleteCharacter(id);
+
+            if (!response.Success)
+            {
+                return NotFound(response);
+            }
+            return Ok(response);
         }
     }
 }

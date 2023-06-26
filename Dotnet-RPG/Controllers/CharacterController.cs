@@ -1,10 +1,13 @@
 ﻿using Azure;
 using Dotnet_RPG.Dtos.Character;
 using Dotnet_RPG.Services.CharacterService;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Dotnet_RPG.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class CharacterController : ControllerBase
@@ -19,7 +22,9 @@ namespace Dotnet_RPG.Controllers
         [HttpGet("GetAll")]
         public async Task<ActionResult<ServiceResponse<List<GetCharacterDto>>>> Get()
         {
-            return Ok(await this._characterService.GetAllCharacters());
+            // Get the user's ID from the current token
+            int uid = int.Parse(User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier)!.Value);
+            return Ok(await this._characterService.GetAllCharacters(uid));
         }
 
         [HttpGet("{id}")]

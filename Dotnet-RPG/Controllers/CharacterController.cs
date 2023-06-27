@@ -22,9 +22,7 @@ namespace Dotnet_RPG.Controllers
         [HttpGet("GetAll")]
         public async Task<ActionResult<ServiceResponse<List<GetCharacterDto>>>> Get()
         {
-            // Get the user's ID from the current token
-            int uid = int.Parse(User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.NameIdentifier)!.Value);
-            return Ok(await this._characterService.GetAllCharacters(uid));
+            return Ok(await this._characterService.GetAllCharacters());
         }
 
         [HttpGet("{id}")]

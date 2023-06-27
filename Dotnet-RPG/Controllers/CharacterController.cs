@@ -49,6 +49,18 @@ namespace Dotnet_RPG.Controllers
             return Ok(response);
         }
 
+        [HttpPost("Skill")]
+        public async Task<ActionResult<ServiceResponse<GetCharacterDto>>> PutCharacterSkill(AddCharacterSkillDto newSkill)
+        {
+            var response = await this._characterService.AddCharacterSkill(newSkill);
+
+            if (!response.Success)
+            {
+                return NotFound(response);
+            }
+            return Ok(response);
+        }
+
         [HttpDelete("{id}")]
         public async Task<ActionResult<ServiceResponse<List<GetCharacterDto>>>> DeleteCharacter(int id)
         {

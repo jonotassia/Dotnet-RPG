@@ -1,4 +1,5 @@
 ﻿using Dotnet_RPG.Dtos.Character;
+using Dotnet_RPG.Dtos.Skill;
 
 namespace Dotnet_RPG.Services.CharacterService
 {
@@ -9,5 +10,6 @@ namespace Dotnet_RPG.Services.CharacterService
         Task<ServiceResponse<List<GetCharacterDto>>> AddCharacter(AddCharacterDto newCharacter);
         Task<ServiceResponse<GetCharacterDto>> UpdateCharacter(UpdateCharacterDto newCharacter);
         Task<ServiceResponse<List<GetCharacterDto>>> DeleteCharacter(int id);
+        Task<ServiceResponse<GetCharacterDto>> AddCharacterSkill(AddCharacterSkillDto newSkill);
     }
 }

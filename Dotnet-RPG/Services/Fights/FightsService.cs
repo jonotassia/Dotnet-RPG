@@ -4,6 +4,8 @@ using Dotnet_RPG.Dtos.Character;
 using Dotnet_RPG.Dtos.Fight;
 using Dotnet_RPG.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Net.WebSockets;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Dotnet_RPG.Services.Fights
 {
@@ -53,17 +55,25 @@ namespace Dotnet_RPG.Services.Fights
                 // Calculate damage and hitpoints
                 if (AttackDto.SkillId != 0)
                 {
-                    CalculateDamage(ref attacker, ref opponent, ref resultDto, AttackDto.SkillId);
+                    string skill = string.Empty;
+                    resultDto.Damage = CalculateDamage(attacker, opponent, out skill, AttackDto.SkillId);
+                    resultDto.SkillUsed = skill;
                 }
                 else
                 {
-                    CalculateDamage(ref attacker, ref opponent, ref resultDto);
+                    resultDto.Damage = CalculateDamage(attacker, opponent);
+                    resultDto.WeaponUsed = attacker.Weapon == null ? "Bare Hands" : attacker.Weapon.Name;
                 }
-                
+                opponent.HitPoints -= resultDto.Damage > 0 ? resultDto.Damage : 0;
+                resultDto.AttackerHP = attacker.HitPoints;
+                resultDto.OpponentHP = opponent.HitPoints;
 
                 // If enemy defeated, set defeated to true. Increments and decrements character stats
-                if (EnemyDefeated(ref attacker, ref opponent))
+                if (opponent.HitPoints <= 0)
                 {
+                    attacker.Victories += 1;
+                    opponent.Defeats += 1;
+
                     resultDto.Defeated = true;
                     serviceResponse.Message = $"{opponent.Name} has been defeated!";
                 }
@@ -83,37 +93,125 @@ namespace Dotnet_RPG.Services.Fights
             }
         }
 
-        private bool EnemyDefeated(ref Character attacker, ref Character opponent)
+        public async Task<ServiceResponse<FightResultsDto>> Fight(FightRequestDto fight)
         {
-            if (opponent.HitPoints <= 0)
+            var response = new ServiceResponse<FightResultsDto>
             {
-                attacker.Victories += 1;
-                opponent.Defeats += 1;
-                return true;
+                Data = new FightResultsDto()
+            };
+            
+            try
+            {
+                var characters = await _context.Characters
+                    .Include(c => c.Weapon)
+                    .Include(c => c.Skills)
+                    .Where(c => fight.CharacterIds.Contains(c.Id))
+                    .ToListAsync();
+
+                bool defeated = false;
+                while (!defeated)
+                {
+                    foreach (var attacker in characters)
+                    {
+                        var opponents = characters.Where(c => c.Id != attacker.Id).ToList();
+                        var opponent = opponents[new Random().Next(opponents.Count)];
+
+                        int damage = 0;
+                        string attackUsed = string.Empty;
+                        bool useWeapon = new Random().Next(2) == 0;
+
+                        if (useWeapon)
+                        {
+                            damage = CalculateDamage(attacker, opponent);
+                            opponent.HitPoints -= damage > 0 ? damage : 0;
+
+                            response.Data.Log
+                                .Add($"{attacker.Name} dealt {damage} to {opponent.Name} " +
+                                $"using {(attacker.Weapon is null ? "Bare Hands" : attacker.Weapon.Name)}");
+                        }
+                        else if (!useWeapon && attacker.Skills is not null)
+                        {
+                            int skillId = attacker.Skills[new Random().Next(attacker.Skills.Count)].Id;
+                            string skillUsed = string.Empty;
+                            damage = CalculateDamage(attacker, opponent, out skillUsed, skillId);
+                            opponent.HitPoints -= damage > 0 ? damage : 0;
+
+                            response.Data.Log
+                                .Add($"{attacker.Name} dealt {damage} to {opponent.Name} " +
+                                $"using {skillUsed}");
+                        }
+                        else
+                        {
+                            response.Data.Log
+                                .Add($"{attacker.Name} was unable to attack.");
+                            continue;
+                        }
+
+                        if (opponent.HitPoints <= 0)
+                        {
+                            attacker.Victories += 1;
+                            opponent.Defeats += 1;
+                            defeated = true;
+                            response.Data.Log.Add($"{opponent.Name} has been defeated!");
+                            response.Data.Log.Add($"{attacker.Name} wins with {attacker.HitPoints} HP remaining!");
+                            break;
+                        }
+                    }
+                }
+
+                characters.ForEach(c =>
+                {
+                    c.Fights++;
+                    c.HitPoints = 100;
+                });
+
+                await _context.SaveChangesAsync();
+                return response;
             }
-            return false;
+            catch (Exception ex)
+            {
+                response.Success = false;
+                response.Message = ex.Message;
+                return response;
+            }
+
         }
 
-        private void CalculateDamage(ref Character attacker, ref Character opponent, ref AttackResultDto resultDto)
+        public async Task<ServiceResponse<List<HighScoreDto>>> GetHighScore()
         {
+            var characters = await _context.Characters
+                .Where(c => c.Fights > 0)
+                .OrderByDescending(c => c.Victories)
+                .ThenBy(c => c.Defeats)
+                .ToListAsync();
+
+            var response = new ServiceResponse<List<HighScoreDto>>();
+            response.Data = characters.Select(c => _mapper.Map<HighScoreDto>(c)).ToList();
+
+            return response;
+        }
+
+        private int CalculateDamage(Character attacker, Character opponent)
+        {
+            int damage = 0;
+            
             if (attacker.Weapon != null)
             {
-                resultDto.WeaponUsed = attacker.Weapon.Name;
-                resultDto.Damage = attacker.Weapon!.Damage - opponent.Defense;
-                opponent.HitPoints -= resultDto.Damage > 0 ? resultDto.Damage : 0;
+                
+                damage = attacker.Weapon!.Damage - opponent.Defense;
             }
             else
             {
-                resultDto.WeaponUsed = "Bare Hands";
-                resultDto.Damage = 1 - opponent.Defense;
-                opponent.HitPoints -= resultDto.Damage > 0 ? resultDto.Damage : 0;
+                damage = 1 - opponent.Defense;
             }
-            resultDto.AttackerHP = attacker.HitPoints;
-            resultDto.OpponentHP = opponent.HitPoints;
+
+            return damage;
         }
 
-        private void CalculateDamage(ref Character attacker, ref Character opponent, ref AttackResultDto resultDto, int skillId)
+        private int CalculateDamage(Character attacker, Character opponent, out string skillName, int skillId)
         {
+            int damage = 0;
+            
             if (attacker.Skills is null)
             {
                 throw new Exception($"{attacker.Name} does not know any skills.");
@@ -123,18 +221,15 @@ namespace Dotnet_RPG.Services.Fights
 
             if (skill != null)
             {
-                resultDto.SkillUsed = skill.Name;
-                resultDto.Damage = skill.Damage + attacker.Intelligence - opponent.Defense;
-                opponent.HitPoints -= resultDto.Damage > 0 ? resultDto.Damage : 0;
+                damage = skill.Damage + attacker.Intelligence - opponent.Defense;
+                skillName = skill.Name;
             }
             else
             {
                 throw new Exception($"{attacker.Name} does not know that skill.");
             }
 
-            resultDto.AttackerHP = attacker.HitPoints;
-            resultDto.OpponentHP = opponent.HitPoints;
+            return damage;
         }
-
     }
 }

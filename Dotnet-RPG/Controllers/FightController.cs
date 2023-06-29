@@ -16,11 +16,35 @@ namespace Dotnet_RPG.Controllers
             _fightService = fightService;
         }
 
-        [HttpPost("Weapon")]
+        [HttpPost("Attack")]
         public async Task<ActionResult<ServiceResponse<AttackResultDto>>> Attack(AttackDto Attack)
         {
             var response = await _fightService.Attack(Attack);
             
+            if (response.Success == false)
+            {
+                return NotFound(response);
+            }
+            return Ok(response);
+        }
+
+        [HttpPost]
+        public async Task<ActionResult<ServiceResponse<FightResultsDto>>> Fight(FightRequestDto fight)
+        {
+            var response = await _fightService.Fight(fight);
+
+            if (response.Success == false)
+            {
+                return NotFound(response);
+            }
+            return Ok(response);
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<ServiceResponse<List<HighScoreDto>>>> GetHighScore()
+        {
+            var response = await _fightService.GetHighScore();
+
             if (response.Success == false)
             {
                 return NotFound(response);

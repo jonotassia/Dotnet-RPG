@@ -20,7 +20,7 @@ namespace Dotnet_RPG.Services.Fights
             _mapper = mapper;
         }
 
-        public async Task<ServiceResponse<AttackResultDto>> WeaponAttack(WeaponAttackDto WeaponAttackDto)
+        public async Task<ServiceResponse<AttackResultDto>> Attack(AttackDto AttackDto)
         {
             var serviceResponse = new ServiceResponse<AttackResultDto>();
 
@@ -29,10 +29,12 @@ namespace Dotnet_RPG.Services.Fights
                 // Get attacker and opponent, then convert to Character object rather than GetCharacterDto
                 var attacker = await _context.Characters
                     .Include(c => c.Weapon)
-                    .FirstOrDefaultAsync(c => c.Id == WeaponAttackDto.AttackerId); 
+                    .Include(c => c.Skills)
+                    .FirstOrDefaultAsync(c => c.Id == AttackDto.AttackerId); 
                 var opponent = await _context.Characters
                     .Include(c => c.Weapon)
-                    .FirstOrDefaultAsync(c => c.Id == WeaponAttackDto.OpponentId);
+                    .Include(c => c.Skills)
+                    .FirstOrDefaultAsync(c => c.Id == AttackDto.OpponentId);
 
                 if (attacker is null || opponent is null)
                 {
@@ -49,7 +51,15 @@ namespace Dotnet_RPG.Services.Fights
                 resultDto.Opponent = opponent.Name;
 
                 // Calculate damage and hitpoints
-                CalculateDamage(ref attacker, ref opponent, ref resultDto);
+                if (AttackDto.SkillId != 0)
+                {
+                    CalculateDamage(ref attacker, ref opponent, ref resultDto, AttackDto.SkillId);
+                }
+                else
+                {
+                    CalculateDamage(ref attacker, ref opponent, ref resultDto);
+                }
+                
 
                 // If enemy defeated, set defeated to true. Increments and decrements character stats
                 if (EnemyDefeated(ref attacker, ref opponent))
@@ -71,7 +81,6 @@ namespace Dotnet_RPG.Services.Fights
                 serviceResponse.Message = ex.Message;
                 return serviceResponse;
             }
-
         }
 
         private bool EnemyDefeated(ref Character attacker, ref Character opponent)
@@ -89,10 +98,40 @@ namespace Dotnet_RPG.Services.Fights
         {
             if (attacker.Weapon != null)
             {
-                resultDto.Damage += attacker.Weapon!.Damage - opponent.Defense;
+                resultDto.WeaponUsed = attacker.Weapon.Name;
+                resultDto.Damage = attacker.Weapon!.Damage - opponent.Defense;
                 opponent.HitPoints -= resultDto.Damage > 0 ? resultDto.Damage : 0;
-                
             }
+            else
+            {
+                resultDto.WeaponUsed = "Bare Hands";
+                resultDto.Damage = 1 - opponent.Defense;
+                opponent.HitPoints -= resultDto.Damage > 0 ? resultDto.Damage : 0;
+            }
+            resultDto.AttackerHP = attacker.HitPoints;
+            resultDto.OpponentHP = opponent.HitPoints;
+        }
+
+        private void CalculateDamage(ref Character attacker, ref Character opponent, ref AttackResultDto resultDto, int skillId)
+        {
+            if (attacker.Skills is null)
+            {
+                throw new Exception($"{attacker.Name} does not know any skills.");
+            }
+            
+            var skill = attacker.Skills!.FirstOrDefault(s => s.Id == skillId);
+
+            if (skill != null)
+            {
+                resultDto.SkillUsed = skill.Name;
+                resultDto.Damage = skill.Damage + attacker.Intelligence - opponent.Defense;
+                opponent.HitPoints -= resultDto.Damage > 0 ? resultDto.Damage : 0;
+            }
+            else
+            {
+                throw new Exception($"{attacker.Name} does not know that skill.");
+            }
+
             resultDto.AttackerHP = attacker.HitPoints;
             resultDto.OpponentHP = opponent.HitPoints;
         }

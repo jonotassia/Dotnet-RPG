@@ -17,9 +17,9 @@ namespace Dotnet_RPG.Controllers
         }
 
         [HttpPost("Weapon")]
-        public async Task<ActionResult<ServiceResponse<AttackResultDto>>> WeaponAttack(WeaponAttackDto weaponAttack)
+        public async Task<ActionResult<ServiceResponse<AttackResultDto>>> Attack(AttackDto Attack)
         {
-            var response = await _fightService.WeaponAttack(weaponAttack);
+            var response = await _fightService.Attack(Attack);
             
             if (response.Success == false)
             {

@@ -11,6 +11,7 @@ using Swashbuckle.AspNetCore.Filters;
 using Microsoft.Extensions.DependencyInjection;
 using Dotnet_RPG.Services.WeaponService;
 using Dotnet_RPG.Services.SkillService;
+using Dotnet_RPG.Services.Fights;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,6 +51,7 @@ builder.Services.AddScoped<ICharacterService, CharacterService>();
 builder.Services.AddScoped<IAuthRepository,  AuthRepository>();
 builder.Services.AddScoped<IWeaponService, WeaponService>();
 builder.Services.AddScoped<ISkillService, SkillService>();
+builder.Services.AddScoped<IFightsService, FightsService>();
 
 var app = builder.Build();
 

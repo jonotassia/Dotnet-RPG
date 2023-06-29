@@ -70,6 +70,18 @@ namespace Dotnet_RPG.Services.CharacterService
             return serviceResponse;
         }
 
+        public async Task<ServiceResponse<GetCharacterDto>> GetChracterByIdNoAuth(int id)
+        {
+            var serviceResponse = new ServiceResponse<GetCharacterDto>();
+            var dbCharacter = await _context.Characters
+                .Include(c => c.Weapon)
+                .Include(c => c.Skills)
+                .FirstOrDefaultAsync(c => c.Id == id);
+
+            serviceResponse.Data = _mapper.Map<GetCharacterDto>(dbCharacter);
+            return serviceResponse;
+        }
+
         public async Task<ServiceResponse<GetCharacterDto>> UpdateCharacter(UpdateCharacterDto updateCharacter)
         {
             var serviceResponse = new ServiceResponse<GetCharacterDto>();

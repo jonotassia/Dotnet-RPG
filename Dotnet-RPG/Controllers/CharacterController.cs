@@ -31,6 +31,13 @@ namespace Dotnet_RPG.Controllers
             return Ok(await this._characterService.GetChracterById(id));
         }
 
+        [AllowAnonymous]
+        [HttpGet("ext/{id}")]
+        public async Task<ActionResult<ServiceResponse<GetCharacterDto>>> GetExtCharacter(int id)
+        {
+            return Ok(await this._characterService.GetChracterByIdNoAuth(id));
+        }
+
         [HttpPost]
         public async Task<ActionResult<ServiceResponse<List<AddCharacterDto>>>> PostCharacter(AddCharacterDto newCharacter)
         {
